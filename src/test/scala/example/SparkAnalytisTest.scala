@@ -39,39 +39,27 @@ class SparkAnalyticsTest extends AnyFunSuite with SparkSessionTestWrapper {
 
     // user data set
     val path = "file//C:/Users/ojuarezespinosa/Documents/projects/spark-analytics/data/MovieLens/"
-    val ratings = spark.read.format("csv").option("header", "false")
-      .option("sep", "\t")
-      .option("escape", "\t")
-      .csv("file:///C:/Users/ojuarezespinosa/Documents/projects/spark-analytics/data/MovieLens/u.data")
-      .toDF(ratings_columns: _*)
+    Logger.getLogger("org").setLevel(Level.OFF)
+    //Read data
 
-    val movies = spark.read.format("csv").option("header", "false")
-      .option("sep", "|")
-      .option("escape", "\t")
-      .csv("file:///C:/Users/ojuarezespinosa/Documents/projects/spark-analytics/data/MovieLens/u.item")
-      .toDF(movies_columns: _*)
+    val rating = SparkAnalytics.readDataTab("file:///C:/Users/ojuarezespinosa/Documents/projects/spark-analytics/data/MovieLens/u.data")
+    val ratings = rating.toDF(ratings_columns: _*)
+    val movie = SparkAnalytics.readDataVertical("file:///C:/Users/ojuarezespinosa/Documents/projects/spark-analytics/data/MovieLens/u.item")
+    val movies = movie.toDF(movies_columns: _*)
 
-    val ratings_date = ratings.select(col("user_id"), col("item_id"), col("rating"), col("timestamp"),
-      (from_unixtime(col("timestamp"))).as("timestamp5")
-      , (year(from_unixtime(col("timestamp"))).as("year"))
-      , (month(from_unixtime(col("timestamp"))).as("month"))
-    )
+    // Transfor Data Frame
+
+    val ratings_movie = SparkAnalytics.getTransform(ratings, movies)
+
+    assert(ratings_movie.count() == 100000)
 
 
-    val ratings_movie = ratings_date.join(movies, ratings_date("item_id") === movies("movie_id"), "inner")
-    //print(ratings_movie.head())
-    //ratings_movie.show()
-    val ratings_all = ratings_movie.groupBy("item_id").agg(count("movie_id").alias("counter")).sort(desc("counter"))
-    val ratings_year = ratings_movie.groupBy("item_id", "year").count().sort()
-    val ratings_year_month = ratings_movie.groupBy("item_id", "year", "month").count().sort()
+    val auxDF = SparkAnalytics.getTop("Adventure", ratings_movie)
+    assert(auxDF.count() == 13753)
+    val summary2 = SparkAnalytics.getTop("Drama", ratings_movie)
 
+    assert(summary2.count() == 39895)
 
-
-    val auxDF= SparkAnalytics.getTop("Adventure",ratings_movie)
-    assert (auxDF.count()== 13753)
-    val test2 = SparkAnalytics.getTop("Drama", ratings_movie)
-    print(test2.count())
-    assert(test2.count() == 8055)
-    //assert(ss == 1)
+    spark.stop()
   }
 }

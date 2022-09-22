@@ -70,40 +70,21 @@ object SparkAnalytics extends SparkSessionWrapper {
       "Western"
     )
 
-    // spark.sparkContext.setLogLevel("ERROR")
-    // import org.apache.log4j.{Level, Logger}
+
     Logger.getLogger("org").setLevel(Level.OFF)
-    // log4j.logger.org.apache.spark.util.ShutdownHookManager = OFF
-    //log4j.logger.org.apache.spark.SparkEnv = ERROR
 
-    // val test=readData("file:///C:/Users/ojuarezespinosa/Documents/projects/spark-analytics/data/MovieLens/u.data")
-    //   val tests = test.toDF(ratings_columns: _*)
-    val ratings = spark.read.format("csv").option("header", "false")
-      .option("sep", "\t")
-      .option("escape", "\t")
-      .csv("file:///C:/Users/ojuarezespinosa/Documents/projects/spark-analytics/data/MovieLens/u.data")
-      .toDF(ratings_columns: _*)
-    //ratings.printSchema()
-    //ratings.show(false)
-    val movies = spark.read.format("csv").option("header", "false")
-      .option("sep", "|")
-      .option("escape", "\t")
-      .csv("file:///C:/Users/ojuarezespinosa/Documents/projects/spark-analytics/data/MovieLens/u.item")
-      .toDF(movies_columns: _*)
+    //Read data
 
-    val ratings_date = ratings.select(col("user_id"), col("item_id"), col("rating"), col("timestamp"),
-      (from_unixtime(col("timestamp"))).as("timestamp5")
-      , (year(from_unixtime(col("timestamp"))).as("year"))
-      , (month(from_unixtime(col("timestamp"))).as("month"))
-    )
+    val rating = readDataTab("file:///C:/Users/ojuarezespinosa/Documents/projects/spark-analytics/data/MovieLens/u.data")
+    val ratings = rating.toDF(ratings_columns: _*)
+    val movie = readDataVertical("file:///C:/Users/ojuarezespinosa/Documents/projects/spark-analytics/data/MovieLens/u.item")
+    val movies = movie.toDF(movies_columns: _*)
 
+    // Transfor Data Frame
 
-    val ratings_movie = ratings_date.join(movies, ratings_date("item_id") === movies("movie_id"), "inner")
-    //print(ratings_movie.head())
-    //ratings_movie.show()
-    val ratings_all = ratings_movie.groupBy("item_id").agg(count("movie_id").alias("counter")).sort(desc("counter"))
-    val ratings_year = ratings_movie.groupBy("item_id", "year").count().sort()
-    val ratings_year_month = ratings_movie.groupBy("item_id", "year", "month").count().sort()
+    val ratings_movie = getTransform(ratings, movies)
+
+    // Get top ten and the top low movies by Gener
 
     getTop("Action", ratings_movie)
 
@@ -126,7 +107,7 @@ object SparkAnalytics extends SparkSessionWrapper {
   }
 
 
-  def readData(path: String) = {
+  def readDataTab(path: String): DataFrame = {
 
     val sqlContext = spark.sqlContext
 
@@ -135,7 +116,32 @@ object SparkAnalytics extends SparkSessionWrapper {
       .option("sep", "\t")
       .option("escape", "\t")
       .csv(path)
+    df
 
+  }
+
+  def readDataVertical(path: String): DataFrame = {
+
+    val sqlContext = spark.sqlContext
+
+
+    val df = sqlContext.read.format("csv").option("header", "false")
+      .option("sep", "|")
+      .option("escape", "\t")
+      .csv(path)
+    df
+
+  }
+
+  def getTransform(ratings: DataFrame, movies: DataFrame): DataFrame = {
+
+    val ratings_date = ratings.select(col("user_id"), col("item_id"), col("rating"), col("timestamp"),
+      (from_unixtime(col("timestamp"))).as("timestamp5")
+      , (year(from_unixtime(col("timestamp"))).as("year"))
+      , (month(from_unixtime(col("timestamp"))).as("month"))
+    )
+    val ratings_movie = ratings_date.join(movies, ratings_date("item_id") === movies("movie_id"), "inner")
+    ratings_movie
   }
 
 
