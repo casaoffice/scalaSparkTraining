@@ -17,7 +17,7 @@ git clone https://github.com/casaoffice/scalaSparkTraining.git
 Enter the project directory
 
 ```
-cd scala-spark-analytics
+cd scalaSparkTraining
 ```
 
 Load the module files for sbt and spark. On Iceberg do:
@@ -43,7 +43,7 @@ sbt package
 ```
 
 If this is successful, you'll have a file in the location .
-"/home/ojuarezwork412/sbt_projects/spark-analytics/target/scala-2.11/spark-analytics_2.11-1.0.jar"
+"target/scala-2.11/spark-analytics_2.11-1.0.jar"
 
 Run with
 
